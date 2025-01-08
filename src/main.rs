@@ -13,6 +13,7 @@ use namada_sdk::{
 };
 use reveal_pk::execute_reveal_pk;
 use sdk::Sdk;
+use shielding_transfer::execute_shielding_tx;
 use tendermint_rpc::{HttpClient, Url};
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
@@ -21,7 +22,9 @@ use transparent_transfer::execute_transparent_tx;
 pub mod config;
 pub mod reveal_pk;
 pub mod sdk;
+pub mod shielding_transfer;
 pub mod transparent_transfer;
+pub mod unshielding_transfer;
 pub mod utils;
 
 #[tokio::main]
@@ -138,9 +141,27 @@ async fn main() {
     let fee_payer = source_public_key.clone();
     let token_amount = token::Amount::from_u64(config.amount);
 
-    tracing::info!("Executing transfer transaction...");
+    tracing::info!("Executing transparent transfer transaction...");
 
     execute_transparent_tx(
+        &sdk,
+        source_address,
+        target_address,
+        native_token,
+        fee_payer,
+        vec![source_public_key],
+        token_amount,
+        config.memo,
+        config.expiration_timestamp_utc,
+    )
+    .await
+    .unwrap();
+
+    tracing::info!("Transparent shielding transfer executed!");
+
+    tracing::info!("Executing transfer transaction...");
+
+    execute_shielding_tx(
         &sdk,
         source_address,
         target_address,
