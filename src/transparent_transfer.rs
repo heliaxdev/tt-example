@@ -63,6 +63,8 @@ pub async fn execute_transparent_tx(
         .submit(transfer_tx.clone(), &transfer_tx_builder.tx)
         .await;
 
+    tracing::debug!("tx result: {:?}", tx);
+
     if utils::is_tx_rejected(&transfer_tx, &tx) {
         match tx {
             Ok(tx) => {
