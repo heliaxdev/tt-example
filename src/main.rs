@@ -166,12 +166,9 @@ async fn main() {
     tracing::info!("Transparent shielding transfer executed!");
 
     let spending_key = ExtendedSpendingKey::from_str(&config.spending_key).unwrap();
-    let s_key_two = ExtendedSpendingKeyMasp::from_bytes(&spending_key.to_bytes()).map_err(|_| "invalid_decoding").unwrap();
+    let s_key_raw = ExtendedSpendingKeyMasp::from(spending_key);
     let extended_viewing_key = ExtendedFullViewingKey::from(&spending_key.into());
-
-    // let pseudo_spending_key_from_viewing_key = PseudoExtendedKey::from(extended_viewing_key);
-    let pseudo_spending_key_from_spending_key = PseudoExtendedKey::from(s_key_two);
-
+    let pseudo_spending_key_from_spending_key = PseudoExtendedKey::from(s_key_raw);
 
     let viewing_key = extended_viewing_key.fvk.vk;
     let (div, _g_d) = find_valid_diversifier(&mut OsRng);
