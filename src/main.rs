@@ -11,11 +11,11 @@ use namada_sdk::{
         find_valid_diversifier, fs::FsShieldedUtils, LedgerMaspClient, MaspLocalTaskEnv,
         ShieldedContext, ShieldedSyncConfig,
     },
-    masp_primitives::zip32::{self, ExtendedKey, PseudoExtendedKey},
+    masp_primitives::zip32::{self, PseudoExtendedKey},
     rpc,
     token::{self, Amount},
     wallet::{fs::FsWalletUtils, DatedKeypair},
-    ExtendedSpendingKey, Namada, PaymentAddress,
+    ExtendedSpendingKey, Namada
 };
 use rand_core::OsRng;
 use reveal_pk::execute_reveal_pk;
@@ -249,6 +249,7 @@ async fn main() {
         pseudo_spending_key,
         native_token,
         fee_payer,
+        vec![source_public_key.clone()],
         token_amount,
         config.memo.clone(),
         config.expiration_timestamp_utc,

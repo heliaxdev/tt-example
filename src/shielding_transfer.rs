@@ -37,7 +37,7 @@ pub async fn execute_shielding_tx(
     }
     transfer_tx_builder = transfer_tx_builder.signing_keys(signers);
 
-    let (mut transfer_tx, signing_data, epoch) = transfer_tx_builder
+    let (mut transfer_tx, signing_data, _epoch) = transfer_tx_builder
         .build(&sdk.namada, &mut bparams)
         .await
         .map_err(|e| e.to_string())?;

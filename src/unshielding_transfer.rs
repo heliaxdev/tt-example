@@ -13,7 +13,7 @@ pub async fn execute_unshielding_tx(
     spending_key: PseudoExtendedKey,
     token_address: Address,
     gas_payer: common::PublicKey,
-    // signers: Vec<common::PublicKey>,
+    signers: Vec<common::PublicKey>,
     amount: token::Amount,
     memo: Option<String>,
     expiration: Option<i64>,
@@ -39,7 +39,7 @@ pub async fn execute_unshielding_tx(
             DateTimeUtc::from_unix_timestamp(expiration).unwrap(),
         ));
     }
-    // transfer_tx_builder = transfer_tx_builder.signing_keys(signers);
+    transfer_tx_builder = transfer_tx_builder.signing_keys(signers);
 
     let (mut transfer_tx, signing_data) = transfer_tx_builder
         .build(&sdk.namada, &mut bparams)
