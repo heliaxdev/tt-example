@@ -3,19 +3,10 @@ use std::{env, str::FromStr, time::Duration};
 use clap::Parser;
 use config::AppConfig;
 use namada_sdk::{
-    address::Address,
-    control_flow::install_shutdown_signal,
-    io::{Client, DevNullProgressBar, NullIo},
-    key::common::SecretKey,
-    masp::{
+    address::Address, control_flow::install_shutdown_signal, io::{Client, DevNullProgressBar, NullIo}, key::common::SecretKey, masp::{
         find_valid_diversifier, fs::FsShieldedUtils, LedgerMaspClient, MaspLocalTaskEnv,
         ShieldedContext, ShieldedSyncConfig,
-    },
-    masp_primitives::zip32::{self, PseudoExtendedKey},
-    rpc,
-    token::{self, Amount},
-    wallet::{fs::FsWalletUtils, DatedKeypair},
-    ExtendedSpendingKey, Namada
+    }, masp_primitives::zip32::{self, ExtendedFullViewingKey, ExtendedSpendingKey as ExtendedSpendingKeyMasp, PseudoExtendedKey}, rpc, string_encoding::Format, token::{self, Amount}, wallet::{fs::FsWalletUtils, DatedKeypair}, ExtendedSpendingKey, Namada
 };
 use rand_core::OsRng;
 use reveal_pk::execute_reveal_pk;
@@ -175,8 +166,13 @@ async fn main() {
     tracing::info!("Transparent shielding transfer executed!");
 
     let spending_key = ExtendedSpendingKey::from_str(&config.spending_key).unwrap();
-    let extended_viewing_key = zip32::ExtendedFullViewingKey::from(&spending_key.into());
-    let pseudo_spending_key = PseudoExtendedKey::from(extended_viewing_key.clone());
+    let s_key_two = ExtendedSpendingKeyMasp::from_bytes(&spending_key.to_bytes()).map_err(|_| "invalid_decoding").unwrap();
+    let extended_viewing_key = ExtendedFullViewingKey::from(&spending_key.into());
+
+    // let pseudo_spending_key_from_viewing_key = PseudoExtendedKey::from(extended_viewing_key);
+    let pseudo_spending_key_from_spending_key = PseudoExtendedKey::from(s_key_two);
+
+
     let viewing_key = extended_viewing_key.fvk.vk;
     let (div, _g_d) = find_valid_diversifier(&mut OsRng);
     let masp_payment_addr = viewing_key
@@ -246,7 +242,7 @@ async fn main() {
     execute_unshielding_tx(
         &sdk,
         source_address,
-        pseudo_spending_key,
+        pseudo_spending_key_from_spending_key,
         native_token,
         fee_payer,
         vec![source_public_key.clone()],
