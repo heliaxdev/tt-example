@@ -1,20 +1,22 @@
 use namada_sdk::{
     address::Address,
-    args::{InputAmount, TxBuilder, TxExpiration, TxTransparentTransferData},
+    args::{InputAmount, TxBuilder, TxExpiration, TxShieldingTransferData},
     key::common,
+    masp_primitives::transaction::components::sapling::builder::{BuildParams, RngBuildParams},
     signing::default_sign,
     time::DateTimeUtc,
     token::{self, DenominatedAmount},
     tx::data::GasLimit,
-    Namada, DEFAULT_GAS_LIMIT,
+    Namada, PaymentAddress, DEFAULT_GAS_LIMIT,
 };
+use rand_core::OsRng;
 
 use crate::{sdk::Sdk, utils};
 
-pub async fn execute_transparent_tx(
+pub async fn execute_shielding_tx(
     sdk: &Sdk,
     source_address: Address,
-    target_address: Address,
+    target_address: PaymentAddress,
     token_address: Address,
     gas_payer: common::PublicKey,
     signers: Vec<common::PublicKey>,
@@ -22,14 +24,17 @@ pub async fn execute_transparent_tx(
     memo: Option<String>,
     expiration: Option<i64>,
 ) -> Result<bool, String> {
-    let tx_transfer_data = TxTransparentTransferData {
+    let tx_transfer_data = TxShieldingTransferData {
         source: source_address.clone(),
-        target: target_address.clone(),
         token: token_address,
         amount: InputAmount::Unvalidated(DenominatedAmount::native(amount)),
     };
 
-    let mut transfer_tx_builder = sdk.namada.new_transparent_transfer(vec![tx_transfer_data]);
+    let mut bparams = RngBuildParams::new(OsRng);
+
+    let mut transfer_tx_builder = sdk
+        .namada
+        .new_shielding_transfer(target_address, vec![tx_transfer_data]);
     transfer_tx_builder = transfer_tx_builder.gas_limit(GasLimit::from(DEFAULT_GAS_LIMIT));
     transfer_tx_builder = transfer_tx_builder.wrapper_fee_payer(gas_payer);
     if let Some(memo) = memo {
@@ -42,8 +47,8 @@ pub async fn execute_transparent_tx(
     }
     transfer_tx_builder = transfer_tx_builder.signing_keys(signers);
 
-    let (mut transfer_tx, signing_data) = transfer_tx_builder
-        .build(&sdk.namada)
+    let (mut transfer_tx, signing_data, _epoch) = transfer_tx_builder
+        .build(&sdk.namada, &mut bparams)
         .await
         .map_err(|e| e.to_string())?;
 

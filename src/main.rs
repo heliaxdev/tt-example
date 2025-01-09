@@ -4,24 +4,38 @@ use clap::Parser;
 use config::AppConfig;
 use namada_sdk::{
     address::Address,
-    io::NullIo,
+    control_flow::install_shutdown_signal,
+    io::{Client, DevNullProgressBar, NullIo},
     key::common::SecretKey,
-    masp::{fs::FsShieldedUtils, ShieldedContext},
+    masp::{
+        find_valid_diversifier, fs::FsShieldedUtils, IndexerMaspClient, MaspLocalTaskEnv,
+        ShieldedContext, ShieldedSyncConfig,
+    },
+    masp_primitives::zip32::{
+        ExtendedFullViewingKey, ExtendedSpendingKey as ExtendedSpendingKeyMasp, PseudoExtendedKey,
+    },
     rpc,
     token::{self, Amount},
-    wallet::fs::FsWalletUtils,
+    wallet::{fs::FsWalletUtils, DatedKeypair},
+    ExtendedSpendingKey, Namada,
 };
+use rand_core::OsRng;
+use reqwest::Url as reqUrl;
 use reveal_pk::execute_reveal_pk;
 use sdk::Sdk;
+use shielding_transfer::execute_shielding_tx;
 use tendermint_rpc::{HttpClient, Url};
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
 use transparent_transfer::execute_transparent_tx;
+use unshielding_transfer::execute_unshielding_tx;
 
 pub mod config;
 pub mod reveal_pk;
 pub mod sdk;
+pub mod shielding_transfer;
 pub mod transparent_transfer;
+pub mod unshielding_transfer;
 pub mod utils;
 
 #[tokio::main]
@@ -61,8 +75,6 @@ async fn main() {
                 .load()
                 .await
                 .expect("Should be able to load shielded context");
-        } else {
-            shielded_ctx.save().await.unwrap();
         }
 
         let io = NullIo;
@@ -138,17 +150,104 @@ async fn main() {
     let fee_payer = source_public_key.clone();
     let token_amount = token::Amount::from_u64(config.amount);
 
-    tracing::info!("Executing transfer transaction...");
+    tracing::info!("Executing transparent transfer transaction...");
 
     execute_transparent_tx(
         &sdk,
-        source_address,
+        source_address.clone(),
         target_address,
+        native_token.clone(),
+        fee_payer.clone(),
+        vec![source_public_key.clone()],
+        token_amount,
+        config.memo.clone(),
+        config.expiration_timestamp_utc,
+    )
+    .await
+    .unwrap();
+
+    tracing::info!("Transparent shielding transfer executed!");
+
+    let spending_key = ExtendedSpendingKey::from_str(&config.spending_key).unwrap();
+    let s_key_raw = ExtendedSpendingKeyMasp::from(spending_key);
+    let extended_viewing_key = ExtendedFullViewingKey::from(&spending_key.into());
+    let pseudo_spending_key_from_spending_key = PseudoExtendedKey::from(s_key_raw);
+
+    let viewing_key = extended_viewing_key.fvk.vk;
+    let (div, _g_d) = find_valid_diversifier(&mut OsRng);
+    let masp_payment_addr = viewing_key
+        .to_payment_address(div)
+        .expect("a PaymentAddress");
+
+    tracing::info!(
+        "Executing shielding transaction to {}...",
+        masp_payment_addr
+    );
+
+    execute_shielding_tx(
+        &sdk,
+        source_address.clone(),
+        masp_payment_addr.clone().into(),
+        native_token.clone(),
+        fee_payer.clone(),
+        vec![source_public_key.clone()],
+        token_amount,
+        config.memo.clone(),
+        config.expiration_timestamp_utc,
+    )
+    .await
+    .unwrap();
+
+    tracing::info!("Done shielding!");
+
+    tracing::info!("Starting to shieldsync (this might take a while)...");
+
+    let mut shielded_ctx = sdk.namada.shielded_mut().await;
+
+    let masp_client = IndexerMaspClient::new(
+        reqwest::Client::new(),
+        reqUrl::parse("https://masp.campfire.tududes.com/api/v1").unwrap(),
+        true,
+        50,
+    );
+    let task_env = MaspLocalTaskEnv::new(16).unwrap();
+    let shutdown_signal = install_shutdown_signal(true);
+
+    let ss_config = ShieldedSyncConfig::builder()
+        .client(masp_client)
+        .fetched_tracker(DevNullProgressBar)
+        .scanned_tracker(DevNullProgressBar)
+        .applied_tracker(DevNullProgressBar)
+        .shutdown_signal(shutdown_signal)
+        .build();
+
+    shielded_ctx
+        .sync(
+            task_env,
+            ss_config,
+            None,
+            &[],
+            &[DatedKeypair::new(viewing_key.clone(), None)],
+        )
+        .await
+        .unwrap();
+
+    shielded_ctx.save().await.unwrap();
+    drop(shielded_ctx);
+
+    tracing::info!("Done shieldsyncing!");
+
+    tracing::info!("Executing unshielding transaction to {}...", source_address);
+
+    execute_unshielding_tx(
+        &sdk,
+        source_address,
+        pseudo_spending_key_from_spending_key,
         native_token,
         fee_payer,
-        vec![source_public_key],
+        vec![source_public_key.clone()],
         token_amount,
-        config.memo,
+        config.memo.clone(),
         config.expiration_timestamp_utc,
     )
     .await

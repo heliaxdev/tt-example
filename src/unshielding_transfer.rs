@@ -1,20 +1,24 @@
 use namada_sdk::{
     address::Address,
-    args::{InputAmount, TxBuilder, TxExpiration, TxTransparentTransferData},
+    args::{InputAmount, TxBuilder, TxExpiration, TxUnshieldingTransferData},
     key::common,
+    masp_primitives::{
+        transaction::components::sapling::builder::RngBuildParams, zip32::PseudoExtendedKey,
+    },
     signing::default_sign,
     time::DateTimeUtc,
     token::{self, DenominatedAmount},
     tx::data::GasLimit,
     Namada, DEFAULT_GAS_LIMIT,
 };
+use rand_core::OsRng;
 
 use crate::{sdk::Sdk, utils};
 
-pub async fn execute_transparent_tx(
+pub async fn execute_unshielding_tx(
     sdk: &Sdk,
-    source_address: Address,
     target_address: Address,
+    spending_key: PseudoExtendedKey,
     token_address: Address,
     gas_payer: common::PublicKey,
     signers: Vec<common::PublicKey>,
@@ -22,14 +26,17 @@ pub async fn execute_transparent_tx(
     memo: Option<String>,
     expiration: Option<i64>,
 ) -> Result<bool, String> {
-    let tx_transfer_data = TxTransparentTransferData {
-        source: source_address.clone(),
-        target: target_address.clone(),
-        token: token_address,
-        amount: InputAmount::Unvalidated(DenominatedAmount::native(amount)),
+    let tx_transfer_data = TxUnshieldingTransferData {
+        target: target_address,
+        token: token_address.clone(),
+        amount: InputAmount::Validated(DenominatedAmount::native(amount)),
     };
 
-    let mut transfer_tx_builder = sdk.namada.new_transparent_transfer(vec![tx_transfer_data]);
+    let mut bparams = RngBuildParams::new(OsRng);
+
+    let mut transfer_tx_builder =
+        sdk.namada
+            .new_unshielding_transfer(spending_key, vec![tx_transfer_data], None, false);
     transfer_tx_builder = transfer_tx_builder.gas_limit(GasLimit::from(DEFAULT_GAS_LIMIT));
     transfer_tx_builder = transfer_tx_builder.wrapper_fee_payer(gas_payer);
     if let Some(memo) = memo {
@@ -43,7 +50,7 @@ pub async fn execute_transparent_tx(
     transfer_tx_builder = transfer_tx_builder.signing_keys(signers);
 
     let (mut transfer_tx, signing_data) = transfer_tx_builder
-        .build(&sdk.namada)
+        .build(&sdk.namada, &mut bparams)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -63,7 +70,7 @@ pub async fn execute_transparent_tx(
         .submit(transfer_tx.clone(), &transfer_tx_builder.tx)
         .await;
 
-    tracing::debug!("tx result: {:?}", tx);
+    tracing::info!("tx result: {:?}", tx);
 
     if utils::is_tx_rejected(&transfer_tx, &tx) {
         match tx {

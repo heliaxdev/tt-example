@@ -12,6 +12,10 @@ pub struct AppConfig {
 
     #[clap(long, env)]
     #[arg(required = true)]
+    pub spending_key: String,
+
+    #[clap(long, env)]
+    #[arg(required = true)]
     pub target_address: String,
 
     #[clap(long, env)]

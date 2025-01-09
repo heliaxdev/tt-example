@@ -1,11 +1,11 @@
-use namada_sdk::{args::TxBuilder, key::common, signing::default_sign, tx::data::GasLimit, Namada, DEFAULT_GAS_LIMIT};
+use namada_sdk::{
+    args::TxBuilder, key::common, signing::default_sign, tx::data::GasLimit, Namada,
+    DEFAULT_GAS_LIMIT,
+};
 
 use crate::{sdk::Sdk, utils};
 
-pub async fn execute_reveal_pk(
-    sdk: &Sdk,
-    public_key: common::PublicKey,
-) -> Result<bool, String> {
+pub async fn execute_reveal_pk(sdk: &Sdk, public_key: common::PublicKey) -> Result<bool, String> {
     let reveal_pk_tx_builder = sdk
         .namada
         .new_reveal_pk(public_key.clone())
