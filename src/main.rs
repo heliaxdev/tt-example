@@ -3,16 +3,28 @@ use std::{env, str::FromStr, time::Duration};
 use clap::Parser;
 use config::AppConfig;
 use namada_sdk::{
-    address::Address, control_flow::install_shutdown_signal, io::{Client, DevNullProgressBar, NullIo}, key::common::SecretKey, masp::{
-        find_valid_diversifier, fs::FsShieldedUtils, IndexerMaspClient, LedgerMaspClient, MaspLocalTaskEnv, ShieldedContext, ShieldedSyncConfig
-    }, masp_primitives::zip32::{self, ExtendedFullViewingKey, ExtendedSpendingKey as ExtendedSpendingKeyMasp, PseudoExtendedKey}, rpc, string_encoding::Format, token::{self, Amount}, wallet::{fs::FsWalletUtils, DatedKeypair}, ExtendedSpendingKey, Namada
+    address::Address,
+    control_flow::install_shutdown_signal,
+    io::{Client, DevNullProgressBar, NullIo},
+    key::common::SecretKey,
+    masp::{
+        find_valid_diversifier, fs::FsShieldedUtils, IndexerMaspClient, MaspLocalTaskEnv,
+        ShieldedContext, ShieldedSyncConfig,
+    },
+    masp_primitives::zip32::{
+        ExtendedFullViewingKey, ExtendedSpendingKey as ExtendedSpendingKeyMasp, PseudoExtendedKey,
+    },
+    rpc,
+    token::{self, Amount},
+    wallet::{fs::FsWalletUtils, DatedKeypair},
+    ExtendedSpendingKey, Namada,
 };
 use rand_core::OsRng;
+use reqwest::Url as reqUrl;
 use reveal_pk::execute_reveal_pk;
 use sdk::Sdk;
 use shielding_transfer::execute_shielding_tx;
 use tendermint_rpc::{HttpClient, Url};
-use reqwest::Url as reqUrl;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
 use transparent_transfer::execute_transparent_tx;
@@ -31,7 +43,7 @@ async fn main() {
     let config = AppConfig::parse();
 
     let filter = EnvFilter::builder()
-        .with_default_directive(LevelFilter::DEBUG.into())
+        .with_default_directive(LevelFilter::INFO.into())
         .from_env()
         .unwrap();
 
@@ -44,15 +56,6 @@ async fn main() {
 
     let url = Url::from_str(&config.rpc).expect("invalid RPC address");
     let http_client = HttpClient::new(url).unwrap();
-
-    let block_height = http_client
-        .latest_block()
-        .await
-        .unwrap()
-        .block
-        .header
-        .height
-        .value();
 
     // we initialize a Sdk structure
     let sdk = loop {
@@ -224,10 +227,7 @@ async fn main() {
             ss_config,
             None,
             &[],
-            &[DatedKeypair::new(
-                viewing_key.clone(),
-                None,
-            )],
+            &[DatedKeypair::new(viewing_key.clone(), None)],
         )
         .await
         .unwrap();

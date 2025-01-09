@@ -1,5 +1,13 @@
 use namada_sdk::{
-    address::Address, args::{InputAmount, TxBuilder, TxExpiration, TxShieldingTransferData}, key::common, masp_primitives::transaction::components::sapling::builder::{BuildParams, RngBuildParams}, signing::default_sign, time::DateTimeUtc, token::{self, DenominatedAmount}, tx::data::GasLimit, Namada, PaymentAddress, DEFAULT_GAS_LIMIT
+    address::Address,
+    args::{InputAmount, TxBuilder, TxExpiration, TxShieldingTransferData},
+    key::common,
+    masp_primitives::transaction::components::sapling::builder::{BuildParams, RngBuildParams},
+    signing::default_sign,
+    time::DateTimeUtc,
+    token::{self, DenominatedAmount},
+    tx::data::GasLimit,
+    Namada, PaymentAddress, DEFAULT_GAS_LIMIT,
 };
 use rand_core::OsRng;
 
@@ -24,7 +32,9 @@ pub async fn execute_shielding_tx(
 
     let mut bparams = RngBuildParams::new(OsRng);
 
-    let mut transfer_tx_builder = sdk.namada.new_shielding_transfer(target_address, vec![tx_transfer_data]);
+    let mut transfer_tx_builder = sdk
+        .namada
+        .new_shielding_transfer(target_address, vec![tx_transfer_data]);
     transfer_tx_builder = transfer_tx_builder.gas_limit(GasLimit::from(DEFAULT_GAS_LIMIT));
     transfer_tx_builder = transfer_tx_builder.wrapper_fee_payer(gas_payer);
     if let Some(memo) = memo {
@@ -58,7 +68,7 @@ pub async fn execute_shielding_tx(
         .submit(transfer_tx.clone(), &transfer_tx_builder.tx)
         .await;
 
-    tracing::debug!("tx result: {:?}", tx); 
+    tracing::debug!("tx result: {:?}", tx);
 
     if utils::is_tx_rejected(&transfer_tx, &tx) {
         match tx {
