@@ -3139,6 +3139,7 @@ dependencies = [
  "clap-verbosity-flag",
  "namada_sdk",
  "rand_core 0.6.4",
+ "reqwest",
  "serde",
  "serde_json",
  "tendermint-config",

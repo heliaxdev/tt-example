@@ -4,8 +4,7 @@ use clap::Parser;
 use config::AppConfig;
 use namada_sdk::{
     address::Address, control_flow::install_shutdown_signal, io::{Client, DevNullProgressBar, NullIo}, key::common::SecretKey, masp::{
-        find_valid_diversifier, fs::FsShieldedUtils, LedgerMaspClient, MaspLocalTaskEnv,
-        ShieldedContext, ShieldedSyncConfig,
+        find_valid_diversifier, fs::FsShieldedUtils, IndexerMaspClient, LedgerMaspClient, MaspLocalTaskEnv, ShieldedContext, ShieldedSyncConfig
     }, masp_primitives::zip32::{self, ExtendedFullViewingKey, ExtendedSpendingKey as ExtendedSpendingKeyMasp, PseudoExtendedKey}, rpc, string_encoding::Format, token::{self, Amount}, wallet::{fs::FsWalletUtils, DatedKeypair}, ExtendedSpendingKey, Namada
 };
 use rand_core::OsRng;
@@ -13,6 +12,7 @@ use reveal_pk::execute_reveal_pk;
 use sdk::Sdk;
 use shielding_transfer::execute_shielding_tx;
 use tendermint_rpc::{HttpClient, Url};
+use reqwest::Url as reqUrl;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
 use transparent_transfer::execute_transparent_tx;
@@ -31,7 +31,7 @@ async fn main() {
     let config = AppConfig::parse();
 
     let filter = EnvFilter::builder()
-        .with_default_directive(LevelFilter::INFO.into())
+        .with_default_directive(LevelFilter::DEBUG.into())
         .from_env()
         .unwrap();
 
@@ -201,8 +201,13 @@ async fn main() {
 
     let mut shielded_ctx = sdk.namada.shielded_mut().await;
 
-    let masp_client = LedgerMaspClient::new(sdk.namada.clone_client(), 10, Duration::from_secs(1));
-    let task_env = MaspLocalTaskEnv::new(4).unwrap();
+    let masp_client = IndexerMaspClient::new(
+        reqwest::Client::new(),
+        reqUrl::parse("https://masp.campfire.tududes.com/api/v1").unwrap(),
+        true,
+        50,
+    );
+    let task_env = MaspLocalTaskEnv::new(16).unwrap();
     let shutdown_signal = install_shutdown_signal(true);
 
     let ss_config = ShieldedSyncConfig::builder()
@@ -213,8 +218,6 @@ async fn main() {
         .shutdown_signal(shutdown_signal)
         .build();
 
-    shielded_ctx.save().await.unwrap();
-
     shielded_ctx
         .sync(
             task_env,
@@ -223,7 +226,7 @@ async fn main() {
             &[],
             &[DatedKeypair::new(
                 viewing_key.clone(),
-                Some(block_height.into()),
+                None,
             )],
         )
         .await
