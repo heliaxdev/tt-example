@@ -5,7 +5,7 @@ use config::AppConfig;
 use namada_sdk::{
     address::Address,
     control_flow::install_shutdown_signal,
-    io::{Client, DevNullProgressBar, NullIo},
+    io::{DevNullProgressBar, NullIo},
     key::common::SecretKey,
     masp::{
         find_valid_diversifier, fs::FsShieldedUtils, IndexerMaspClient, MaspLocalTaskEnv,
@@ -154,11 +154,6 @@ async fn main() {
 
     execute_transparent_tx(
         &sdk,
-<<<<<<< Updated upstream
-        source_address.clone(),
-=======
-<<<<<<< Updated upstream
-=======
         source_address.clone(),
         target_address,
         native_token.clone(),
@@ -246,10 +241,8 @@ async fn main() {
 
     execute_unshielding_tx(
         &sdk,
->>>>>>> Stashed changes
-        source_address,
->>>>>>> Stashed changes
-        target_address,
+        source_address.clone(),
+        pseudo_spending_key_from_spending_key,
         native_token.clone(),
         fee_payer.clone(),
         vec![source_public_key.clone()],

@@ -1,5 +1,14 @@
 use namada_sdk::{
-    address::Address, args::{InputAmount, TxBuilder, TxExpiration, TxTransparentTransferData}, borsh::BorshDeserialize, bytes::HEXLOWER, key::common, signing::default_sign, time::DateTimeUtc, token::{self, DenominatedAmount, Transfer}, tx::data::GasLimit, Namada, DEFAULT_GAS_LIMIT
+    address::Address,
+    args::{InputAmount, TxBuilder, TxExpiration, TxTransparentTransferData},
+    borsh::BorshDeserialize,
+    bytes::HEXLOWER,
+    key::common,
+    signing::default_sign,
+    time::DateTimeUtc,
+    token::{self, DenominatedAmount, Transfer},
+    tx::data::GasLimit,
+    Namada, DEFAULT_GAS_LIMIT,
 };
 
 use crate::{sdk::Sdk, utils};
@@ -56,18 +65,13 @@ pub async fn execute_transparent_tx(
         .submit(transfer_tx.clone(), &transfer_tx_builder.tx)
         .await;
 
-<<<<<<< Updated upstream
-    tracing::debug!("tx result: {:?}", tx);
-
-=======
-<<<<<<< Updated upstream
-=======
-    tracing::info!("Transparent wrapper tx hash: {:?}", transfer_tx.wrapper_hash().map(|h| HEXLOWER.encode(&h.0)));
+    tracing::info!(
+        "Transparent wrapper tx hash: {:?}",
+        transfer_tx.wrapper_hash().map(|h| HEXLOWER.encode(&h.0))
+    );
 
     tracing::debug!("tx result: {:?}", tx);
 
->>>>>>> Stashed changes
->>>>>>> Stashed changes
     if utils::is_tx_rejected(&transfer_tx, &tx) {
         match tx {
             Ok(tx) => {

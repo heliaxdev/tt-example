@@ -1,7 +1,7 @@
 use namada_sdk::{
-<<<<<<< Updated upstream
     address::Address,
     args::{InputAmount, TxBuilder, TxExpiration, TxUnshieldingTransferData},
+    bytes::HEXLOWER,
     key::common,
     masp_primitives::{
         transaction::components::sapling::builder::RngBuildParams, zip32::PseudoExtendedKey,
@@ -11,11 +11,6 @@ use namada_sdk::{
     token::{self, DenominatedAmount},
     tx::data::GasLimit,
     Namada, DEFAULT_GAS_LIMIT,
-=======
-    address::Address, args::{InputAmount, TxBuilder, TxExpiration, TxUnshieldingTransferData}, bytes::HEXLOWER, key::common, masp_primitives::{
-        transaction::components::sapling::builder::RngBuildParams, zip32::PseudoExtendedKey,
-    }, signing::default_sign, time::DateTimeUtc, token::{self, DenominatedAmount}, tx::data::GasLimit, Namada, DEFAULT_GAS_LIMIT
->>>>>>> Stashed changes
 };
 use rand_core::OsRng;
 
@@ -75,15 +70,13 @@ pub async fn execute_unshielding_tx(
         .namada
         .submit(transfer_tx.clone(), &transfer_tx_builder.tx)
         .await;
-<<<<<<< Updated upstream
 
-    tracing::info!("tx result: {:?}", tx);
-=======
-    
-    tracing::info!("Unshielding wrapper tx hash: {:?}", transfer_tx.wrapper_hash().map(|h| HEXLOWER.encode(&h.0)));
-            
+    tracing::info!(
+        "Unshielding wrapper tx hash: {:?}",
+        transfer_tx.wrapper_hash().map(|h| HEXLOWER.encode(&h.0))
+    );
+
     tracing::debug!("tx result: {:?}", tx);
->>>>>>> Stashed changes
 
     if utils::is_tx_rejected(&transfer_tx, &tx) {
         match tx {
