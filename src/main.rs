@@ -154,7 +154,101 @@ async fn main() {
 
     execute_transparent_tx(
         &sdk,
+<<<<<<< Updated upstream
         source_address.clone(),
+=======
+<<<<<<< Updated upstream
+=======
+        source_address.clone(),
+        target_address,
+        native_token.clone(),
+        fee_payer.clone(),
+        vec![source_public_key.clone()],
+        token_amount,
+        config.memo.clone(),
+        config.expiration_timestamp_utc,
+    )
+    .await
+    .unwrap();
+
+    tracing::info!("Transparent shielding transfer executed!");
+
+    let spending_key = ExtendedSpendingKey::from_str(&config.spending_key).unwrap();
+    let s_key_raw = ExtendedSpendingKeyMasp::from(spending_key);
+    let extended_viewing_key = ExtendedFullViewingKey::from(&spending_key.into());
+    let pseudo_spending_key_from_spending_key = PseudoExtendedKey::from(s_key_raw);
+
+    let viewing_key = extended_viewing_key.fvk.vk;
+    let (div, _g_d) = find_valid_diversifier(&mut OsRng);
+    let masp_payment_addr = viewing_key
+        .to_payment_address(div)
+        .expect("a PaymentAddress");
+
+    tracing::info!(
+        "Executing shielding transaction to payment address {}...",
+        masp_payment_addr
+    );
+
+    execute_shielding_tx(
+        &sdk,
+        source_address.clone(),
+        masp_payment_addr.clone().into(),
+        native_token.clone(),
+        fee_payer.clone(),
+        vec![source_public_key.clone()],
+        token_amount,
+        config.memo.clone(),
+        config.expiration_timestamp_utc,
+    )
+    .await
+    .unwrap();
+
+    tracing::info!("Done shielding!");
+
+    tracing::info!("Starting to shieldsync (this might take a while)...");
+
+    let mut shielded_ctx = sdk.namada.shielded_mut().await;
+
+    let masp_client = IndexerMaspClient::new(
+        reqwest::Client::new(),
+        reqUrl::parse("https://masp.campfire.tududes.com/api/v1").unwrap(),
+        true,
+        50,
+    );
+    let task_env = MaspLocalTaskEnv::new(16).unwrap();
+    let shutdown_signal = install_shutdown_signal(true);
+
+    let ss_config = ShieldedSyncConfig::builder()
+        .client(masp_client)
+        .fetched_tracker(DevNullProgressBar)
+        .scanned_tracker(DevNullProgressBar)
+        .applied_tracker(DevNullProgressBar)
+        .shutdown_signal(shutdown_signal)
+        .build();
+
+    shielded_ctx
+        .sync(
+            task_env,
+            ss_config,
+            None,
+            &[],
+            &[DatedKeypair::new(viewing_key.clone(), None)],
+        )
+        .await
+        .unwrap();
+
+    shielded_ctx.save().await.unwrap();
+    drop(shielded_ctx);
+
+    tracing::info!("Done shieldsyncing!");
+
+    tracing::info!("Executing unshielding transaction to {}...", source_address);
+
+    execute_unshielding_tx(
+        &sdk,
+>>>>>>> Stashed changes
+        source_address,
+>>>>>>> Stashed changes
         target_address,
         native_token.clone(),
         fee_payer.clone(),

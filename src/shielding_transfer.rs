@@ -1,4 +1,5 @@
 use namada_sdk::{
+<<<<<<< Updated upstream
     address::Address,
     args::{InputAmount, TxBuilder, TxExpiration, TxShieldingTransferData},
     key::common,
@@ -8,6 +9,9 @@ use namada_sdk::{
     token::{self, DenominatedAmount},
     tx::data::GasLimit,
     Namada, PaymentAddress, DEFAULT_GAS_LIMIT,
+=======
+    address::Address, args::{InputAmount, TxBuilder, TxExpiration, TxShieldingTransferData}, bytes::HEXLOWER, key::common, masp_primitives::transaction::components::sapling::builder::{BuildParams, RngBuildParams}, signing::default_sign, time::DateTimeUtc, token::{self, DenominatedAmount}, tx::data::GasLimit, Namada, PaymentAddress, DEFAULT_GAS_LIMIT
+>>>>>>> Stashed changes
 };
 use rand_core::OsRng;
 
@@ -68,6 +72,11 @@ pub async fn execute_shielding_tx(
         .submit(transfer_tx.clone(), &transfer_tx_builder.tx)
         .await;
 
+<<<<<<< Updated upstream
+=======
+    tracing::info!("Shielding wrapper tx hash: {:?}", transfer_tx.wrapper_hash().map(|h| HEXLOWER.encode(&h.0)));
+
+>>>>>>> Stashed changes
     tracing::debug!("tx result: {:?}", tx);
 
     if utils::is_tx_rejected(&transfer_tx, &tx) {
