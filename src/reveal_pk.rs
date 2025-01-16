@@ -38,9 +38,9 @@ pub async fn execute_reveal_pk(sdk: &Sdk, public_key: common::PublicKey) -> Resu
         match tx {
             Ok(tx) => {
                 let errors = utils::get_tx_errors(&reveal_tx, &tx).unwrap_or_default();
-                return Err(errors);
+                Err(errors)
             }
-            Err(e) => return Err(e.to_string()),
+            Err(e) => Err(e.to_string()),
         }
     } else {
         Ok(true)

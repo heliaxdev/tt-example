@@ -95,7 +95,7 @@ pub async fn submit_transparent_tx(
     }
 
     // Submit tx
-    let tx = sdk.namada.submit(transfer_tx.clone(), &args).await;
+    let tx = sdk.namada.submit(transfer_tx.clone(), args).await;
 
     tracing::info!(
         "Transparent wrapper tx hash: {:?}",
@@ -108,9 +108,9 @@ pub async fn submit_transparent_tx(
         match tx {
             Ok(tx) => {
                 let errors = utils::get_tx_errors(&transfer_tx, &tx).unwrap_or_default();
-                return Err(errors);
+                Err(errors)
             }
-            Err(e) => return Err(e.to_string()),
+            Err(e) => Err(e.to_string()),
         }
     } else {
         Ok(true)
