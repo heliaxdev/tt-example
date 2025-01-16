@@ -3,7 +3,7 @@ use namada_sdk::{
     args::{InputAmount, TxBuilder, TxExpiration, TxShieldingTransferData},
     bytes::HEXLOWER,
     key::common,
-    masp_primitives::transaction::components::sapling::builder::{BuildParams, RngBuildParams},
+    masp_primitives::transaction::components::sapling::builder::RngBuildParams,
     signing::default_sign,
     time::DateTimeUtc,
     token::{self, DenominatedAmount},
@@ -80,9 +80,9 @@ pub async fn execute_shielding_tx(
         match tx {
             Ok(tx) => {
                 let errors = utils::get_tx_errors(&transfer_tx, &tx).unwrap_or_default();
-                return Err(errors);
+                Err(errors)
             }
-            Err(e) => return Err(e.to_string()),
+            Err(e) => Err(e.to_string()),
         }
     } else {
         Ok(true)

@@ -187,7 +187,7 @@ async fn main() {
     execute_shielding_tx(
         &sdk,
         source_address.clone(),
-        masp_payment_addr.clone().into(),
+        masp_payment_addr.into(),
         native_token.clone(),
         fee_payer.clone(),
         vec![source_public_key.clone()],
@@ -227,7 +227,7 @@ async fn main() {
             ss_config,
             None,
             &[],
-            &[DatedKeypair::new(viewing_key.clone(), None)],
+            &[DatedKeypair::new(viewing_key, None)],
         )
         .await
         .unwrap();
@@ -274,7 +274,7 @@ async fn main() {
     execute_shielding_tx(
         &sdk,
         source_address.clone(),
-        masp_payment_addr.clone().into(),
+        masp_payment_addr.into(),
         native_token.clone(),
         fee_payer.clone(),
         vec![source_public_key.clone()],
@@ -314,7 +314,7 @@ async fn main() {
             ss_config,
             None,
             &[],
-            &[DatedKeypair::new(viewing_key.clone(), None)],
+            &[DatedKeypair::new(viewing_key, None)],
         )
         .await
         .unwrap();

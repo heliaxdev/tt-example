@@ -1,12 +1,11 @@
 use namada_sdk::{
     address::Address,
     args::{InputAmount, TxBuilder, TxExpiration, TxTransparentTransferData},
-    borsh::BorshDeserialize,
     bytes::HEXLOWER,
     key::common,
     signing::default_sign,
     time::DateTimeUtc,
-    token::{self, DenominatedAmount, Transfer},
+    token::{self, DenominatedAmount},
     tx::data::GasLimit,
     Namada, DEFAULT_GAS_LIMIT,
 };
@@ -76,9 +75,9 @@ pub async fn execute_transparent_tx(
         match tx {
             Ok(tx) => {
                 let errors = utils::get_tx_errors(&transfer_tx, &tx).unwrap_or_default();
-                return Err(errors);
+                Err(errors)
             }
-            Err(e) => return Err(e.to_string()),
+            Err(e) => Err(e.to_string()),
         }
     } else {
         Ok(true)
