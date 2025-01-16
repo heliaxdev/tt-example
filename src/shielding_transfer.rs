@@ -3,7 +3,7 @@ use namada_sdk::{
     args::{InputAmount, TxBuilder, TxExpiration, TxShieldingTransferData},
     bytes::HEXLOWER,
     key::common,
-    masp_primitives::transaction::components::sapling::builder::{BuildParams, RngBuildParams},
+    masp_primitives::transaction::components::sapling::builder::RngBuildParams,
     signing::default_sign,
     time::DateTimeUtc,
     token::{self, DenominatedAmount},

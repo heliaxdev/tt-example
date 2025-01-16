@@ -31,6 +31,7 @@ use transparent_transfer::execute_transparent_tx;
 use unshielding_transfer::execute_unshielding_tx;
 
 pub mod config;
+pub mod offline_signature;
 pub mod reveal_pk;
 pub mod sdk;
 pub mod shielding_transfer;
@@ -328,9 +329,9 @@ async fn main() {
 
     execute_unshielding_tx(
         &sdk,
-        source_address,
+        source_address.clone(),
         pseudo_spending_key_from_spending_key,
-        native_token,
+        native_token.clone(),
         fee_payer,
         vec![source_public_key.clone()],
         token_amount,
@@ -340,5 +341,40 @@ async fn main() {
     .await
     .unwrap();
 
-    tracing::info!("Done!");
+    tracing::info!("Done unshielding!");
+
+    // Transparent transfer with offline signing
+    let target_address = Address::from_str(&config.target_address).unwrap();
+
+    let fee_payer = source_public_key.clone();
+    let token_amount = token::Amount::from_u64(config.amount);
+
+    tracing::info!("Executing transparent transfer transaction with offline signatures...");
+
+    let (args, tx, signing_tx_data) = offline_signature::build_transparent_transfer(
+        &sdk,
+        source_address,
+        target_address,
+        native_token,
+        fee_payer,
+        vec![source_public_key],
+        token_amount,
+        config.memo,
+        config.expiration_timestamp_utc,
+    )
+    .await
+    .unwrap();
+
+    // Produce the tx signatures offline
+    let offline_signatures =
+        offline_signature::generate_offline_signatures(&sdk, &args, tx.clone(), signing_tx_data)
+            .await
+            .unwrap();
+
+    // Attach the signatures to the tx and submit it
+    offline_signature::submit_transparent_tx(&sdk, &args, tx, offline_signatures)
+        .await
+        .unwrap();
+
+    tracing::info!("Done transparent transfer with offline signatures!");
 }

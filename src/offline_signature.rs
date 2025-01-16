@@ -3,7 +3,7 @@ use namada_sdk::{
     args::{InputAmount, TxBuilder, TxExpiration, TxTransparentTransferData},
     bytes::HEXLOWER,
     key::common,
-    signing::default_sign,
+    signing::{find_key_by_pk, OfflineSignatures, SigningTxData},
     time::DateTimeUtc,
     token::{self, DenominatedAmount},
     tx::data::GasLimit,
@@ -12,7 +12,7 @@ use namada_sdk::{
 
 use crate::{sdk::Sdk, utils};
 
-pub async fn execute_transparent_tx(
+pub async fn build_transparent_transfer(
     sdk: &Sdk,
     source_address: Address,
     target_address: Address,
@@ -22,7 +22,7 @@ pub async fn execute_transparent_tx(
     amount: token::Amount,
     memo: Option<String>,
     expiration: Option<i64>,
-) -> Result<bool, String> {
+) -> Result<(namada_sdk::args::Tx, namada_sdk::tx::Tx, SigningTxData), String> {
     let tx_transfer_data = TxTransparentTransferData {
         source: source_address.clone(),
         target: target_address.clone(),
@@ -43,26 +43,59 @@ pub async fn execute_transparent_tx(
     }
     transfer_tx_builder = transfer_tx_builder.signing_keys(signers);
 
-    let (mut transfer_tx, signing_data) = transfer_tx_builder
+    let (tx, signing_tx_data) = transfer_tx_builder
         .build(&sdk.namada)
         .await
         .map_err(|e| e.to_string())?;
 
-    sdk.namada
-        .sign(
-            &mut transfer_tx,
-            &transfer_tx_builder.tx,
-            signing_data,
-            default_sign,
-            (),
-        )
-        .await
-        .expect("unable to sign tx");
+    Ok((transfer_tx_builder.tx, tx, signing_tx_data))
+}
 
-    let tx = sdk
-        .namada
-        .submit(transfer_tx.clone(), &transfer_tx_builder.tx)
-        .await;
+pub async fn generate_offline_signatures(
+    sdk: &Sdk,
+    args: &namada_sdk::args::Tx,
+    tx: namada_sdk::tx::Tx,
+    signing_tx_data: SigningTxData,
+) -> Result<OfflineSignatures, String> {
+    let mut wallet = sdk.namada.wallet_mut().await;
+    let secret_keys_res: Vec<_> = signing_tx_data
+        .public_keys
+        .iter()
+        .map(|pubkey| find_key_by_pk(&mut wallet, args, pubkey))
+        .collect();
+    let secret_keys: Result<Vec<common::SecretKey>, _> = secret_keys_res
+        .into_iter()
+        .map(|res| res.map_err(|e| e.to_string()))
+        .collect();
+    let wrapper_signer = find_key_by_pk(&mut *wallet, args, &signing_tx_data.fee_payer).ok();
+
+    namada_sdk::signing::generate_tx_signatures(
+        tx,
+        secret_keys?,
+        signing_tx_data.owner,
+        wrapper_signer,
+    )
+    .await
+    .map_err(|err| err.to_string())
+}
+
+pub async fn submit_transparent_tx(
+    sdk: &Sdk,
+    args: &namada_sdk::args::Tx,
+    mut transfer_tx: namada_sdk::tx::Tx,
+    OfflineSignatures {
+        signatures,
+        wrapper_signature,
+    }: OfflineSignatures,
+) -> Result<bool, String> {
+    // Attach the signatures produced offline
+    transfer_tx.add_signatures(signatures);
+    if let Some(auth) = wrapper_signature {
+        transfer_tx.add_section(namada_sdk::tx::Section::Authorization(auth));
+    }
+
+    // Submit tx
+    let tx = sdk.namada.submit(transfer_tx.clone(), &args).await;
 
     tracing::info!(
         "Transparent wrapper tx hash: {:?}",

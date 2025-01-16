@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.4.2", features = ["derive", "env"] }
 clap-verbosity-flag = "2.1.1"
-namada_sdk = { git = "https://github.com/anoma/namada", branch = "fraccaman/unshielding-trait", default-features = false, features = ["std", "async-send", "download-params"] }
+namada_sdk = { git = "https://github.com/anoma/namada", default-features = false, features = ["std", "async-send", "download-params"] }
 tendermint-config = "0.38.0" 
 tendermint-rpc = { version = "0.38.0", features = ["http-client"]}
 tokio = {version = "1.8.2", default-features = false}
